@@ -733,7 +733,7 @@ export default function NavigationBuilderPage() {
 
       <div className="grid grid-cols-3 gap-6">
         {/* Navigation Tree Builder */}
-        <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+        <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden flex flex-col">
           <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
@@ -773,7 +773,7 @@ export default function NavigationBuilderPage() {
             </div>
           </div>
 
-          <div className="p-4 max-h-[600px] overflow-y-auto">
+          <div className="p-4 flex-1 overflow-y-auto min-h-0">
             <div className="space-y-1">
               {navigation.map((item) => renderNavItem(item))}
             </div>
