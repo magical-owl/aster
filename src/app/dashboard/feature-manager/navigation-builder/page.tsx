@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import * as Icons from "lucide-react";
 import { useToast } from "@/lib/toast";
@@ -176,6 +176,9 @@ export default function NavigationBuilderPage() {
   const [editName, setEditName] = useState("");
   const [editIcon, setEditIcon] = useState("");
   const [iconSearch, setIconSearch] = useState("");
+  const [pageFeatures, setPageFeatures] = useState<any[]>([]);
+  const [containers, setContainers] = useState<any[]>([]);
+  const [selectedSourceItem, setSelectedSourceItem] = useState<string>("");
 
   const getIcon = (iconName: string) => {
     const Icon = (Icons as any)[iconName] || Icons.Circle;
@@ -270,6 +273,28 @@ export default function NavigationBuilderPage() {
     navigator.clipboard.writeText(JSON.stringify(navigation, null, 2));
     addToast("JSON copied to clipboard", "success");
   };
+
+  // Load dropdown options
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const [featuresRes, containersRes] = await Promise.all([
+          fetch("/api/feature-manager/navigation/features"),
+          fetch("/api/feature-manager/navigation/containers"),
+        ]);
+
+        const features = await featuresRes.json();
+        const containersData = await containersRes.json();
+
+        setPageFeatures(features);
+        setContainers(containersData);
+      } catch (error) {
+        console.error("Failed to load dropdown options:", error);
+      }
+    };
+
+    loadOptions();
+  }, []);
 
   const filteredIcons = commonIcons.filter((icon) =>
     icon.toLowerCase().includes(iconSearch.toLowerCase()),
@@ -561,49 +586,72 @@ export default function NavigationBuilderPage() {
               Add new item
             </h3>
 
-            <div className="flex gap-3 mb-4">
-              <button
-                onClick={() => {
-                  setNewItemType("container");
-                  setSelectedIcon("Folder");
+            <div className="mb-4">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                Item Type
+              </label>
+              <select
+                value={newItemType}
+                onChange={(e) => {
+                  setNewItemType(e.target.value as "page" | "container");
+                  setSelectedSourceItem("");
+                  setNewItemName("");
+                  setSelectedIcon(
+                    e.target.value === "container" ? "Folder" : "Circle",
+                  );
                 }}
-                className={`flex-1 py-2 px-3 rounded-lg border-2 transition-colors ${
-                  newItemType === "container"
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                    : "border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-600 text-zinc-700 dark:text-zinc-300"
-                }`}
+                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
               >
-                <div className="flex flex-col items-center gap-1">
-                  <Icons.Folder className="w-5 h-5" />
-                  <span className="text-xs">Container</span>
-                </div>
-              </button>
-              <button
-                onClick={() => {
-                  setNewItemType("page");
-                  setSelectedIcon("Circle");
-                }}
-                className={`flex-1 py-2 px-3 rounded-lg border-2 transition-colors ${
-                  newItemType === "page"
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                    : "border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-600 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <Icons.Link className="w-5 h-5" />
-                  <span className="text-xs">Page Item</span>
-                </div>
-              </button>
+                <option value="container">Container</option>
+                <option value="page">Page Item</option>
+              </select>
             </div>
 
-            <input
-              type="text"
-              autoFocus
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              placeholder="Enter name..."
-              className="w-full px-3 py-2 mb-4 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
-            />
+            <div className="mb-4">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                {newItemType === "container"
+                  ? "Select Container"
+                  : "Select Page"}
+              </label>
+              <select
+                value={selectedSourceItem}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  setSelectedSourceItem(selectedId);
+
+                  if (newItemType === "page") {
+                    const feature = pageFeatures.find(
+                      (f) => f.id === selectedId,
+                    );
+                    if (feature) {
+                      setNewItemName(feature.name);
+                    }
+                  } else {
+                    const container = containers.find(
+                      (c) => c.id === selectedId,
+                    );
+                    if (container) {
+                      setNewItemName(container.name);
+                      if (container.icon) setSelectedIcon(container.icon);
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">-- Select --</option>
+                {newItemType === "page"
+                  ? pageFeatures.map((feature) => (
+                      <option key={feature.id} value={feature.id}>
+                        {feature.name}
+                      </option>
+                    ))
+                  : containers.map((container) => (
+                      <option key={container.id} value={container.id}>
+                        {container.name}
+                      </option>
+                    ))}
+              </select>
+            </div>
 
             <div className="mb-4">
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
