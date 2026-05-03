@@ -258,9 +258,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             : "text-zinc-500 dark:text-zinc-400"
                         }
                       >
-                        {typeof IconComponent === "function" && (
-                          <IconComponent className="w-5 h-5" />
-                        )}
+                        <IconComponent className="w-5 h-5" />
                       </span>
                       <span className="flex-1">{item.name}</span>
                       <Icons.ChevronDown
@@ -300,9 +298,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                     : "text-zinc-400 dark:text-zinc-500"
                                 }
                               >
-                                {typeof ChildIconComponent === "function" && (
-                                  <ChildIconComponent className="w-5 h-5" />
-                                )}
+                                <ChildIconComponent className="w-5 h-5" />
                               </span>
                               <span className="flex-1">{child.name}</span>
                             </div>
@@ -341,9 +337,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         : "text-zinc-500 dark:text-zinc-400"
                     }
                   >
-                    {typeof IconComponentFinal === "function" && (
-                      <IconComponentFinal className="w-5 h-5" />
-                    )}
+                    <IconComponentFinal className="w-5 h-5" />
                   </span>
                   <span className="flex-1">{item.name}</span>
                 </div>
