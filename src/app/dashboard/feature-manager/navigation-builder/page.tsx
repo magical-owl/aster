@@ -179,6 +179,8 @@ export default function NavigationBuilderPage() {
   const [pageFeatures, setPageFeatures] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
   const [selectedSourceItem, setSelectedSourceItem] = useState<string>("");
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   const getIcon = (iconName: string) => {
     const Icon = (Icons as any)[iconName] || Icons.Circle;
@@ -278,16 +280,19 @@ export default function NavigationBuilderPage() {
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [featuresRes, containersRes] = await Promise.all([
+        const [featuresRes, containersRes, templatesRes] = await Promise.all([
           fetch("/api/feature-manager/navigation/features"),
           fetch("/api/feature-manager/navigation/containers"),
+          fetch("/api/feature-manager/navigation/templates"),
         ]);
 
         const features = await featuresRes.json();
         const containersData = await containersRes.json();
+        const templatesData = await templatesRes.json();
 
         setPageFeatures(features);
         setContainers(containersData);
+        setTemplates(templatesData);
       } catch (error) {
         console.error("Failed to load dropdown options:", error);
       }
@@ -295,6 +300,53 @@ export default function NavigationBuilderPage() {
 
     loadOptions();
   }, []);
+
+  // Load template when selected
+  useEffect(() => {
+    if (!selectedTemplateId) return;
+
+    const loadTemplate = async () => {
+      try {
+        const res = await fetch(
+          `/api/feature-manager/navigation/templates/${selectedTemplateId}`,
+        );
+        const navigationData = await res.json();
+        setNavigation(navigationData);
+        addToast("Template loaded successfully", "success");
+      } catch (error) {
+        console.error("Failed to load template:", error);
+        addToast("Failed to load template", "error");
+      }
+    };
+
+    loadTemplate();
+  }, [selectedTemplateId]);
+
+  // Save template function
+  const saveTemplate = async () => {
+    if (!selectedTemplateId) {
+      addToast("Please select a template first", "warning");
+      return;
+    }
+
+    try {
+      await fetch(
+        `/api/feature-manager/navigation/templates/${selectedTemplateId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ navigation }),
+        },
+      );
+
+      addToast("Template saved successfully", "success");
+    } catch (error) {
+      console.error("Failed to save template:", error);
+      addToast("Failed to save template", "error");
+    }
+  };
 
   const filteredIcons = commonIcons.filter((icon) =>
     icon.toLowerCase().includes(iconSearch.toLowerCase()),
@@ -682,23 +734,43 @@ export default function NavigationBuilderPage() {
       <div className="grid grid-cols-3 gap-6">
         {/* Navigation Tree Builder */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
-          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex items-center justify-between">
-            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
-              Navigation Structure
-            </h3>
-            <button
-              onClick={() => {
-                setNewItemDialog({ type: "root" });
-                setNewItemType("container");
-                setNewItemName("");
-                setSelectedIcon("Folder");
-                setIconSearch("");
-              }}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              <Icons.Plus className="w-4 h-4" />
-              Add Item
-            </button>
+          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
+                Navigation Structure
+              </h3>
+              <button
+                onClick={() => {
+                  setNewItemDialog({ type: "root" });
+                  setNewItemType("container");
+                  setNewItemName("");
+                  setSelectedIcon("Folder");
+                  setIconSearch("");
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <Icons.Plus className="w-4 h-4" />
+                Add Item
+              </button>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1 block">
+                Select Template
+              </label>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">-- Select Template --</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="p-4 max-h-[600px] overflow-y-auto">
@@ -715,12 +787,10 @@ export default function NavigationBuilderPage() {
               Reset
             </button>
             <button
-              onClick={() =>
-                addToast("Navigation structure saved successfully", "success")
-              }
+              onClick={saveTemplate}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
-              Save Changes
+              Save Template
             </button>
           </div>
         </div>
