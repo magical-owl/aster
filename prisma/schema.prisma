@@ -625,7 +625,7 @@ model Feature {
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
-  templateItems         FeatureAccessTemplateItem[]
+  templateItems         FeatureAccessItem[]
   FeatureNavigationItem FeatureNavigationItem[]
   archivedByUser        User? @relation("FeatureArchivedBy", fields: [archivedBy], references: [id])
 
@@ -648,7 +648,7 @@ model FeatureAccessTemplate {
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
-  items      FeatureAccessTemplateItem[]
+  items      FeatureAccessItem[]
   roleAccess RoleAccess[]
   archivedByUser User? @relation("AccessTemplateArchivedBy", fields: [archivedBy], references: [id])
 
@@ -657,7 +657,7 @@ model FeatureAccessTemplate {
   @@map("feature_access_templates")
 }
 
-model FeatureAccessTemplateItem {
+model FeatureAccessItem {
   id            String      @id @default(uuid())
   templateId    String      @map("template_id")
   featureId     String      @map("feature_id")

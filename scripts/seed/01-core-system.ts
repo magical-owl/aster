@@ -475,7 +475,7 @@ async function seedCoreSystem() {
     ];
 
     for (const item of templateItems) {
-      await prisma.featureAccessTemplateItem.upsert({
+      await prisma.featureAccessItem.upsert({
         where: {
           templateId_featureId_action: {
             templateId: item.templateId,
