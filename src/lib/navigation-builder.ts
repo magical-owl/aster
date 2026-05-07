@@ -58,10 +58,7 @@ export async function buildUserNavigation({
       }));
   };
 
-  console.log(
-    "Navigation structure built:",
-    JSON.stringify(buildTree(null), null, 2),
-  );
+  // console.log("Navigation structure built:",JSON.stringify(buildTree(null), null, 2),);
 
   return {
     version: 3,

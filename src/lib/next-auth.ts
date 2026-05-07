@@ -157,7 +157,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = token.role;
       }
 
-      console.log("Session object built:", JSON.stringify(session, null, 2));
+      // console.log("Session object built:", JSON.stringify(session, null, 2));
 
       /**
        * DEBUG_SESSION_SECURITY
