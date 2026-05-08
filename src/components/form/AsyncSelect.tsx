@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import type { FieldProps } from "./types";
 
 interface LookupOption {
-  id: number;
+  id: string | number;
   name: string;
 }
 
@@ -137,7 +137,13 @@ export function AsyncSelect({
           value={fieldValue?.toString() || ""}
           onChange={(e) => {
             const value = e.target.value;
-            setValue(name, value === "" ? undefined : Number(value), {
+            const parsedValue =
+              value === ""
+                ? undefined
+                : isNaN(Number(value))
+                  ? value
+                  : Number(value);
+            setValue(name, parsedValue, {
               shouldValidate: true,
             });
           }}
