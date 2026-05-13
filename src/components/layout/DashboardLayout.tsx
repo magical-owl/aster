@@ -199,7 +199,8 @@ export default function DashboardLayout({
                           </p>
                         </div>
                         <div className="p-1">
-                          {user?.role?.name?.toLowerCase() === "admin" && (
+                          {user?.role?.name?.toLowerCase() ===
+                            "super admin" && (
                             <button
                               onClick={() => {
                                 setIsOpen(false);
