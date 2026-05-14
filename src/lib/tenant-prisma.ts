@@ -33,6 +33,7 @@ export function getScopedPrisma(companyId: number) {
     "leaveType",
     "infractionType",
     "infractionOffense",
+    "featureNavigationTemplate",
   ];
 
   const scopedPrisma = new Proxy(prisma, {

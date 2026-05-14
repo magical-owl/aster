@@ -172,7 +172,6 @@ const initialNavigation: NavItem[] = [
   },
 ];
 
-/** Deep-clone a nav item to an access item with default view=true permissions */
 function navToAccessItem(
   item: NavItem,
   existingAccess?: AccessItem[],
@@ -194,13 +193,44 @@ function navToAccessItem(
   };
 }
 
-/** Sync the access structure to mirror the navigation structure,
- *  preserving any existing permission values by id. */
 function syncAccessFromNavigation(
   nav: NavItem[],
   currentAccess?: AccessItem[],
 ): AccessItem[] {
   return nav.map((item) => navToAccessItem(item, currentAccess));
+}
+
+function flattenAccessRules(items: AccessItem[]): Array<{
+  featureCode: string;
+  action: string;
+  effect: "allow" | "deny";
+  scopeLevel: string;
+  scopeOverride: boolean;
+}> {
+  const rules: Array<{
+    featureCode: string;
+    action: string;
+    effect: "allow" | "deny";
+    scopeLevel: string;
+    scopeOverride: boolean;
+  }> = [];
+  for (const item of items) {
+    const fc = item.name.toLowerCase().replace(/\s+/g, "_");
+    for (const perm of ["view", "edit", "create", "delete"] as const) {
+      if (item.permissions[perm]) {
+        rules.push({
+          featureCode: fc,
+          action: `${fc}:${perm}`,
+          effect: "allow",
+          scopeLevel: "self",
+          scopeOverride: false,
+        });
+      }
+    }
+    if (item.children.length > 0)
+      rules.push(...flattenAccessRules(item.children));
+  }
+  return rules;
 }
 
 export default function NavigationBuilderPage() {
@@ -228,14 +258,15 @@ export default function NavigationBuilderPage() {
   const [selectedSourceItem, setSelectedSourceItem] = useState<string>("");
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [accessTemplates, setAccessTemplates] = useState<any[]>([]);
+  const [linkedAccessTemplateId, setLinkedAccessTemplateId] =
+    useState<string>("");
 
-  /** Helper to set both navigation and sync access structure */
   const setNavAndAccess = useCallback(
     (navUpdater: NavItem[] | ((prev: NavItem[]) => NavItem[])) => {
       setNavigation((prevNav) => {
         const nextNav =
           typeof navUpdater === "function" ? navUpdater(prevNav) : navUpdater;
-        // Use a functional updater for access so we get the latest value
         setAccessStructure((prevAccess) =>
           syncAccessFromNavigation(nextNav, prevAccess),
         );
@@ -272,7 +303,6 @@ export default function NavigationBuilderPage() {
 
   const createNewItem = () => {
     if (!newItemName.trim()) return;
-
     const newItem: NavItem = {
       id: String(Date.now()),
       name: newItemName.trim(),
@@ -282,7 +312,6 @@ export default function NavigationBuilderPage() {
       children: [],
       expanded: true,
     };
-
     if (newItemDialog?.type === "root") {
       setNavAndAccess([...navigation, newItem]);
     } else if (newItemDialog?.type === "child" && newItemDialog.parentId) {
@@ -294,7 +323,6 @@ export default function NavigationBuilderPage() {
         );
       setNavAndAccess(addToParent(navigation));
     }
-
     setNewItemDialog(null);
     setNewItemName("");
     setSelectedIcon("Folder");
@@ -307,14 +335,12 @@ export default function NavigationBuilderPage() {
 
   const updateItem = (itemId: string) => {
     if (!editName.trim()) return;
-
     const updateValues = (items: NavItem[]): NavItem[] =>
       items.map((item) =>
         item.id === itemId
           ? { ...item, name: editName.trim(), icon: editIcon }
           : { ...item, children: updateValues(item.children) },
       );
-
     setNavAndAccess(updateValues(navigation));
     setEditingItem(null);
     setEditName("");
@@ -326,12 +352,10 @@ export default function NavigationBuilderPage() {
       items
         .filter((item) => item.id !== itemId)
         .map((item) => ({ ...item, children: removeItem(item.children) }));
-
     setNavAndAccess(removeItem(navigation));
     addToast("Navigation item deleted", "success");
   };
 
-  /** Update a single permission on an access item */
   const toggleAccessPermission = (
     itemId: string,
     perm: "view" | "edit" | "create" | "delete",
@@ -351,13 +375,11 @@ export default function NavigationBuilderPage() {
     setAccessStructure(updatePerm(accessStructure));
   };
 
-  /** Delete an item from *both* nav and access */
   const deleteAccessItem = (itemId: string) => {
     const removeItem = (items: NavItem[]): NavItem[] =>
       items
         .filter((item) => item.id !== itemId)
         .map((item) => ({ ...item, children: removeItem(item.children) }));
-
     setNavAndAccess(removeItem(navigation));
     addToast("Access item deleted", "success");
   };
@@ -371,59 +393,128 @@ export default function NavigationBuilderPage() {
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [featuresRes, containersRes, templatesRes] = await Promise.all([
-          fetch("/api/feature-manager/navigation/features"),
-          fetch("/api/feature-manager/navigation/containers"),
-          fetch("/api/feature-manager/navigation/templates"),
-        ]);
-
-        const features = await featuresRes.json();
-        const containersData = await containersRes.json();
-        const templatesData = await templatesRes.json();
-
-        setPageFeatures(features);
-        setContainers(containersData);
-        setTemplates(templatesData);
+        const [featuresRes, containersRes, templatesRes, accessTemplatesRes] =
+          await Promise.all([
+            fetch("/api/feature-manager/navigation/features"),
+            fetch("/api/feature-manager/navigation/containers"),
+            fetch("/api/feature-manager/navigation/templates"),
+            fetch("/api/feature-manager/access/templates"),
+          ]);
+        setPageFeatures(await featuresRes.json());
+        setContainers(await containersRes.json());
+        setTemplates(await templatesRes.json());
+        setAccessTemplates(await accessTemplatesRes.json());
       } catch (error) {
         console.error("Failed to load dropdown options:", error);
       }
     };
-
     loadOptions();
   }, []);
 
-  // Load template when selected
+  // When nav template changes, find or create matching access template by name
   useEffect(() => {
-    if (!selectedTemplateId) return;
+    if (!selectedTemplateId) {
+      setLinkedAccessTemplateId("");
+      return;
+    }
 
-    const loadTemplate = async () => {
+    const navTemplate = templates.find((t) => t.id === selectedTemplateId);
+    if (!navTemplate) return;
+
+    const ensureAccessTemplate = async () => {
+      // Try to find existing access template with the same name
+      const existing = accessTemplates.find(
+        (at: any) => at.name === navTemplate.name,
+      );
+      if (existing) {
+        setLinkedAccessTemplateId(existing.id);
+        return existing.id;
+      }
+
+      // Create a new access template with the same name
+      const code =
+        navTemplate.code || navTemplate.name.toLowerCase().replace(/\s+/g, "-");
+      const res = await fetch("/api/feature-manager/access/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: navTemplate.name, code }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setLinkedAccessTemplateId(created.id);
+        // Refresh access templates list
+        const listRes = await fetch("/api/feature-manager/access/templates");
+        setAccessTemplates(await listRes.json());
+        return created.id;
+      }
+      return "";
+    };
+
+    const loadNavAndAccess = async () => {
       try {
-        const res = await fetch(
-          `/api/feature-manager/navigation/templates/${selectedTemplateId}`,
-        );
-        const navigationData = await res.json();
-        // Set nav and rebuild access from the loaded template data
-        setNavigation(navigationData);
-        setAccessStructure(syncAccessFromNavigation(navigationData));
-        addToast("Template loaded successfully", "success");
+        const accessId = await ensureAccessTemplate();
+
+        const [navRes, accessRes] = await Promise.all([
+          fetch(
+            `/api/feature-manager/navigation/templates/${selectedTemplateId}`,
+          ),
+          accessId
+            ? fetch(`/api/feature-manager/access/templates/${accessId}`)
+            : Promise.resolve(null),
+        ]);
+
+        const navData = await navRes.json();
+        setNavigation(navData);
+
+        if (accessRes && accessRes.ok) {
+          const rules = await accessRes.json();
+          const applyRules = (items: AccessItem[]): AccessItem[] =>
+            items.map((item) => {
+              const fc = item.name.toLowerCase().replace(/\s+/g, "_");
+              const matching = rules.filter((r: any) =>
+                r.action.startsWith(fc),
+              );
+              return {
+                ...item,
+                permissions: {
+                  view: matching.some((r: any) => r.action === `${fc}:view`),
+                  edit: matching.some((r: any) => r.action === `${fc}:edit`),
+                  create: matching.some(
+                    (r: any) => r.action === `${fc}:create`,
+                  ),
+                  delete: matching.some(
+                    (r: any) => r.action === `${fc}:delete`,
+                  ),
+                },
+                children: applyRules(item.children),
+              };
+            });
+          setAccessStructure(applyRules(syncAccessFromNavigation(navData)));
+        } else {
+          setAccessStructure(syncAccessFromNavigation(navData));
+        }
       } catch (error) {
         console.error("Failed to load template:", error);
-        addToast("Failed to load template", "error");
       }
     };
 
-    loadTemplate();
-  }, [selectedTemplateId, addToast]);
+    loadNavAndAccess();
+  }, [selectedTemplateId, templates, accessTemplates, addToast]);
 
-  // Save template function
-  const saveTemplate = async () => {
+  // Save navigation + access together
+  const saveAll = async () => {
     if (!selectedTemplateId) {
-      addToast("Please select a template first", "warning");
+      addToast("Please select a navigation template first", "warning");
+      return;
+    }
+    if (!linkedAccessTemplateId) {
+      addToast("No linked access template found", "error");
       return;
     }
 
     try {
-      await fetch(
+      // Save navigation
+      const navRes = await fetch(
         `/api/feature-manager/navigation/templates/${selectedTemplateId}`,
         {
           method: "PUT",
@@ -431,10 +522,23 @@ export default function NavigationBuilderPage() {
           body: JSON.stringify({ navigation }),
         },
       );
+      if (!navRes.ok) throw new Error("Failed to save navigation");
 
-      addToast("Template saved successfully", "success");
+      // Save access
+      const accessRules = flattenAccessRules(accessStructure);
+      const accessRes = await fetch(
+        `/api/feature-manager/access/templates/${linkedAccessTemplateId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessRules }),
+        },
+      );
+      if (!accessRes.ok) throw new Error("Failed to save access");
+
+      addToast("Navigation and Access saved successfully", "success");
     } catch (error) {
-      console.error("Failed to save template:", error);
+      console.error("Failed to save:", error);
       addToast("Failed to save template", "error");
     }
   };
@@ -466,11 +570,7 @@ export default function NavigationBuilderPage() {
             <button
               key={iconName}
               onClick={() => onSelect(iconName)}
-              className={`p-2 rounded-md transition-colors ${
-                isSelected
-                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
-                  : "hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
-              }`}
+              className={`p-2 rounded-md transition-colors ${isSelected ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" : "hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400"}`}
             >
               <Icon className="w-4 h-4" />
             </button>
@@ -531,7 +631,6 @@ export default function NavigationBuilderPage() {
           <div className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-600 rounded cursor-grab">
             <Icons.GripVertical className="w-4 h-4 text-zinc-400" />
           </div>
-
           {item.type === "container" && (
             <button
               onClick={(e) => {
@@ -545,7 +644,6 @@ export default function NavigationBuilderPage() {
               />
             </button>
           )}
-
           <span
             className={
               isActive
@@ -555,13 +653,11 @@ export default function NavigationBuilderPage() {
           >
             {getIcon(item.icon)}
           </span>
-
           <span
             className={`flex-1 text-sm font-medium ${isActive ? "text-blue-600 dark:text-blue-400" : "text-zinc-900 dark:text-zinc-100"}`}
           >
             {item.name}
           </span>
-
           <div className="relative flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {item.type === "container" && (
               <button
@@ -575,7 +671,6 @@ export default function NavigationBuilderPage() {
                 <Icons.Plus className="w-4 h-4" />
               </button>
             )}
-
             {showAddMenu === item.id && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg p-1 min-w-[160px]">
                 <button
@@ -589,8 +684,7 @@ export default function NavigationBuilderPage() {
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-left text-zinc-700 dark:text-zinc-300"
                 >
-                  <Icons.Link className="w-4 h-4" />
-                  Add Page Item
+                  <Icons.Link className="w-4 h-4" /> Add Page Item
                 </button>
                 <button
                   onClick={(e) => {
@@ -603,12 +697,10 @@ export default function NavigationBuilderPage() {
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-left text-zinc-700 dark:text-zinc-300"
                 >
-                  <Icons.Folder className="w-4 h-4" />
-                  Add Container
+                  <Icons.Folder className="w-4 h-4" /> Add Container
                 </button>
               </div>
             )}
-
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -634,7 +726,6 @@ export default function NavigationBuilderPage() {
             </button>
           </div>
         </div>
-
         {item.type === "container" &&
           item.expanded &&
           item.children.length > 0 && (
@@ -646,75 +737,60 @@ export default function NavigationBuilderPage() {
     );
   };
 
-  const renderPreviewItem = (item: NavItem, depth: number = 0) => {
-    const isActive = activeItem === item.id;
-
-    return (
-      <div key={item.id}>
-        {item.type === "container" ? (
-          <div className="mt-1">
-            <div
-              className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${
-                isActive
-                  ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                  : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              }`}
-              onClick={() => toggleExpand(item.id, "nav")}
-            >
-              <span
-                className={
-                  isActive
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-zinc-500 dark:text-zinc-400"
-                }
-              >
-                {getIcon(item.icon)}
-              </span>
-              <span className="flex-1">{item.name}</span>
-              <Icons.ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${item.expanded ? "rotate-180" : ""}`}
-              />
-            </div>
-
-            {item.expanded && (
-              <div className="ml-3 pl-4 border-l border-zinc-200 dark:border-zinc-700 space-y-1 mt-1">
-                {item.children.map((child) =>
-                  renderPreviewItem(child, depth + 1),
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
+  const renderPreviewItem = (item: NavItem, depth: number = 0) => (
+    <div key={item.id}>
+      {item.type === "container" ? (
+        <div className="mt-1">
           <div
-            className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${
-              isActive
-                ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            }`}
-            onClick={() => setActiveItem(item.id)}
+            className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${activeItem === item.id ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+            onClick={() => toggleExpand(item.id, "nav")}
           >
             <span
               className={
-                isActive
+                activeItem === item.id
                   ? "text-blue-600 dark:text-blue-400"
-                  : "text-zinc-400 dark:text-zinc-500"
+                  : "text-zinc-500 dark:text-zinc-400"
               }
             >
               {getIcon(item.icon)}
             </span>
-            <span>{item.name}</span>
+            <span className="flex-1">{item.name}</span>
+            <Icons.ChevronDown
+              className={`w-4 h-4 transition-transform duration-200 ${item.expanded ? "rotate-180" : ""}`}
+            />
           </div>
-        )}
-      </div>
-    );
-  };
+          {item.expanded && (
+            <div className="ml-3 pl-4 border-l border-zinc-200 dark:border-zinc-700 space-y-1 mt-1">
+              {item.children.map((child) =>
+                renderPreviewItem(child, depth + 1),
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${activeItem === item.id ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+          onClick={() => setActiveItem(item.id)}
+        >
+          <span
+            className={
+              activeItem === item.id
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-zinc-400 dark:text-zinc-500"
+            }
+          >
+            {getIcon(item.icon)}
+          </span>
+          <span>{item.name}</span>
+        </div>
+      )}
+    </div>
+  );
 
-  /** Render access structure item with icon-based toggles (👁️ ✏️ ➕ 🗑️) */
   const renderAccessItem = (item: AccessItem, depth: number = 0) => {
     const p = item.permissions;
-    const iconClass = (active: boolean, color: string) =>
+    const ic = (active: boolean, color: string) =>
       `w-3.5 h-3.5 ${active ? color : "text-zinc-300 dark:text-zinc-600"}`;
-
     return (
       <div key={item.id} className="group">
         <div
@@ -733,7 +809,6 @@ export default function NavigationBuilderPage() {
           ) : (
             <div className="w-4 shrink-0" />
           )}
-
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={(e) => {
@@ -744,10 +819,7 @@ export default function NavigationBuilderPage() {
               className="p-0.5 rounded hover:bg-green-50 dark:hover:bg-green-900/20"
             >
               <Icons.Eye
-                className={iconClass(
-                  p.view,
-                  "text-green-600 dark:text-green-400",
-                )}
+                className={ic(p.view, "text-green-600 dark:text-green-400")}
               />
             </button>
             <button
@@ -759,10 +831,7 @@ export default function NavigationBuilderPage() {
               className="p-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
               <Icons.Pencil
-                className={iconClass(
-                  p.edit,
-                  "text-blue-600 dark:text-blue-400",
-                )}
+                className={ic(p.edit, "text-blue-600 dark:text-blue-400")}
               />
             </button>
             <button
@@ -774,10 +843,7 @@ export default function NavigationBuilderPage() {
               className="p-0.5 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20"
             >
               <Icons.PlusCircle
-                className={iconClass(
-                  p.create,
-                  "text-purple-600 dark:text-purple-400",
-                )}
+                className={ic(p.create, "text-purple-600 dark:text-purple-400")}
               />
             </button>
             <button
@@ -789,18 +855,13 @@ export default function NavigationBuilderPage() {
               className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
             >
               <Icons.Trash2
-                className={iconClass(
-                  p.delete,
-                  "text-red-600 dark:text-red-400",
-                )}
+                className={ic(p.delete, "text-red-600 dark:text-red-400")}
               />
             </button>
           </div>
-
           <span className="flex-1 text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate min-w-0 ml-1">
             {item.name}
           </span>
-
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             <button
               onClick={(e) => {
@@ -814,7 +875,6 @@ export default function NavigationBuilderPage() {
             </button>
           </div>
         </div>
-
         {item.children.length > 0 && item.expanded && (
           <div>
             {item.children.map((child) => renderAccessItem(child, depth + 1))}
@@ -830,7 +890,6 @@ export default function NavigationBuilderPage() {
       subtitle="Build and preview your navigation structure"
       icon={<Icons.Layout className="w-6 h-6 text-white" />}
     >
-      {/* New Item Dialog */}
       {newItemDialog && (
         <div
           className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
@@ -843,7 +902,6 @@ export default function NavigationBuilderPage() {
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
               Add new item
             </h3>
-
             <div className="mb-4">
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
                 Item Type
@@ -864,7 +922,6 @@ export default function NavigationBuilderPage() {
                 <option value="page">Page Item</option>
               </select>
             </div>
-
             <div className="mb-4">
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
                 {newItemType === "container"
@@ -874,21 +931,16 @@ export default function NavigationBuilderPage() {
               <select
                 value={selectedSourceItem}
                 onChange={(e) => {
-                  const selectedId = e.target.value;
-                  setSelectedSourceItem(selectedId);
-
+                  const id = e.target.value;
+                  setSelectedSourceItem(id);
                   if (newItemType === "page") {
-                    const feature = pageFeatures.find(
-                      (f) => f.id === selectedId,
-                    );
-                    if (feature) setNewItemName(feature.name);
+                    const f = pageFeatures.find((x) => x.id === id);
+                    if (f) setNewItemName(f.name);
                   } else {
-                    const container = containers.find(
-                      (c) => c.id === selectedId,
-                    );
-                    if (container) {
-                      setNewItemName(container.name);
-                      if (container.icon) setSelectedIcon(container.icon);
+                    const c = containers.find((x) => x.id === id);
+                    if (c) {
+                      setNewItemName(c.name);
+                      if (c.icon) setSelectedIcon(c.icon);
                     }
                   }
                 }}
@@ -896,26 +948,24 @@ export default function NavigationBuilderPage() {
               >
                 <option value="">-- Select --</option>
                 {newItemType === "page"
-                  ? pageFeatures.map((feature) => (
-                      <option key={feature.id} value={feature.id}>
-                        {feature.name}
+                  ? pageFeatures.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
                       </option>
                     ))
-                  : containers.map((container) => (
-                      <option key={container.id} value={container.id}>
-                        {container.name}
+                  : containers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
                       </option>
                     ))}
               </select>
             </div>
-
             <div className="mb-4">
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
                 Icon
               </label>
               {renderIconPicker(selectedIcon, setSelectedIcon)}
             </div>
-
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setNewItemDialog(null)}
@@ -935,9 +985,8 @@ export default function NavigationBuilderPage() {
         </div>
       )}
 
-      {/* Top Row: Navigation Structure | Live Preview | Access Structure */}
       <div className="grid grid-cols-3 gap-6">
-        {/* ─── Navigation Structure ─── */}
+        {/* Navigation Structure */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden flex flex-col">
           <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -954,11 +1003,9 @@ export default function NavigationBuilderPage() {
                 }}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
-                <Icons.Plus className="w-4 h-4" />
-                Add Item
+                <Icons.Plus className="w-4 h-4" /> Add Item
               </button>
             </div>
-
             <div>
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1 block">
                 Select Template
@@ -969,21 +1016,19 @@ export default function NavigationBuilderPage() {
                 className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-zinc-100"
               >
                 <option value="">-- Select Template --</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
-
           <div className="p-4 flex-1 overflow-y-auto min-h-0">
             <div className="space-y-1">
               {navigation.map((item) => renderNavItem(item))}
             </div>
           </div>
-
           <div className="px-4 py-3 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex justify-end gap-3">
             <button
               onClick={() => {
@@ -995,36 +1040,28 @@ export default function NavigationBuilderPage() {
               Reset
             </button>
             <button
-              onClick={saveTemplate}
+              onClick={saveAll}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
-              Save Template
+              Save All
             </button>
           </div>
         </div>
-        {/* ─── Access Structure ─── */}
+
+        {/* Access Structure */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden flex flex-col">
-          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex flex-col gap-3">
+          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
                 Access Structure
               </h3>
-              <button
-                onClick={() => {
-                  setNewItemDialog({ type: "root" });
-                  setNewItemType("container");
-                  setNewItemName("");
-                  setSelectedIcon("Folder");
-                  setIconSearch("");
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                <Icons.Plus className="w-4 h-4" />
-                Add Item
-              </button>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {linkedAccessTemplateId
+                  ? `Linked: ${accessTemplates.find((t: any) => t.id === linkedAccessTemplateId)?.name ?? "Loading..."}`
+                  : "Select a navigation template"}
+              </span>
             </div>
           </div>
-
           <div className="p-4 flex-1 overflow-y-auto min-h-0">
             {accessStructure.length === 0 ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">
@@ -1037,20 +1074,18 @@ export default function NavigationBuilderPage() {
               </div>
             )}
           </div>
-
-          <div className="px-4 py-3 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50"></div>
+          <div className="px-4 py-3 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50" />
         </div>
 
-        {/* ─── Live Preview ─── */}
+        {/* Live Preview */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden flex flex-col">
-          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex flex-col gap-3">
+          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
                 Live Preview
               </h3>
             </div>
           </div>
-
           <div className="p-4 flex-1 overflow-y-auto min-h-0">
             <div className="w-full border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
               <div className="p-4 border-b border-zinc-200 dark:border-zinc-700 flex items-center gap-3">
@@ -1066,20 +1101,17 @@ export default function NavigationBuilderPage() {
                   </p>
                 </div>
               </div>
-
               <nav className="p-2 space-y-1">
                 {navigation.map((item) => renderPreviewItem(item))}
               </nav>
             </div>
           </div>
-
-          <div className="px-4 py-3 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50"></div>
+          <div className="px-4 py-3 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50" />
         </div>
       </div>
 
       {/* Bottom Row: JSON Outputs */}
       <div className="grid grid-cols-2 gap-6 mt-6">
-        {/* ─── JSON Output — Navigation Structure ─── */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
           <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex items-center justify-between">
             <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
@@ -1089,36 +1121,32 @@ export default function NavigationBuilderPage() {
               onClick={() => copyToClipboard(navigation)}
               className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
-              <Icons.Copy className="w-4 h-4" />
-              Copy
+              <Icons.Copy className="w-4 h-4" /> Copy
             </button>
           </div>
-
           <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 max-h-[400px] overflow-y-auto">
             <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
               {JSON.stringify(navigation, null, 2)}
             </pre>
           </div>
         </div>
-
-        {/* ─── JSON Output — Access Structure ─── */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden flex flex-col">
           <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50 flex items-center justify-between">
             <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
               JSON Output — Access Structure
             </h3>
             <button
-              onClick={() => copyToClipboard(accessStructure)}
+              onClick={() =>
+                copyToClipboard(flattenAccessRules(accessStructure))
+              }
               className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
-              <Icons.Copy className="w-4 h-4" />
-              Copy
+              <Icons.Copy className="w-4 h-4" /> Copy
             </button>
           </div>
-
           <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 max-h-[400px] overflow-y-auto flex-1">
             <pre className="text-xs font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-all">
-              {JSON.stringify(accessStructure, null, 2)}
+              {JSON.stringify(flattenAccessRules(accessStructure), null, 2)}
             </pre>
           </div>
         </div>
