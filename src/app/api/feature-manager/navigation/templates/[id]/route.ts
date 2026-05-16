@@ -12,6 +12,7 @@ function buildNestedTree(items: any[], parentId: string | null = null): any[] {
       icon: item.icon || "Circle",
       type: item.type === "container" ? "container" : "page",
       url: item.url,
+      featureCode: item.featureCode,
       children: buildNestedTree(items, item.id),
       expanded: true,
     }));
@@ -94,6 +95,7 @@ export async function PUT(
               url: item.url || null,
               sortOrder,
               code: item.id || String(Date.now() + sortOrder),
+              featureCode: item.featureCode || null,
             },
           });
 

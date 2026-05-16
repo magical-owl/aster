@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import * as Icons from "lucide-react";
 import { useToast } from "@/lib/toast";
+import { AccessItem as AccessItemModel } from "@/types/access";
 
 interface NavItem {
   id: string;
@@ -13,11 +14,13 @@ interface NavItem {
   url?: string;
   children: NavItem[];
   expanded: boolean;
+  featureCode?: string;
 }
 
 interface AccessItem {
   id: string;
   name: string;
+  featureCode?: string;
   permissions: {
     view: boolean;
     edit: boolean;
@@ -26,6 +29,33 @@ interface AccessItem {
   };
   children: AccessItem[];
   expanded: boolean;
+}
+
+interface Feature {
+  id: string;
+  code: string;
+  name: string;
+  // Add other fields as needed
+}
+
+interface Container {
+  id: string;
+  name: string;
+  // Add other fields as needed
+}
+
+interface NavTemplate {
+  id: string;
+  name: string;
+  code?: string;
+  // Add other fields as needed
+}
+
+interface AccessTemplate {
+  id: string;
+  name: string;
+  code?: string;
+  // Add other fields as needed
 }
 
 interface NewItemDialog {
@@ -197,7 +227,14 @@ function syncAccessFromNavigation(
   nav: NavItem[],
   currentAccess?: AccessItem[],
 ): AccessItem[] {
-  return nav.map((item) => navToAccessItem(item, currentAccess));
+  return nav.map((item) =>
+    item.featureCode
+      ? {
+          ...navToAccessItem(item, currentAccess),
+          featureCode: item.featureCode,
+        }
+      : navToAccessItem(item, currentAccess),
+  );
 }
 
 function flattenAccessRules(items: AccessItem[]): Array<{
@@ -215,12 +252,12 @@ function flattenAccessRules(items: AccessItem[]): Array<{
     scopeOverride: boolean;
   }> = [];
   for (const item of items) {
-    const fc = item.name.toLowerCase().replace(/\s+/g, "_");
+    const fc = item.featureCode || item.name.toLowerCase().replace(/\s+/g, "_");
     for (const perm of ["view", "edit", "create", "delete"] as const) {
       if (item.permissions[perm]) {
         rules.push({
           featureCode: fc,
-          action: `${fc}:${perm}`,
+          action: perm,
           effect: "allow",
           scopeLevel: "self",
           scopeOverride: false,
@@ -372,6 +409,7 @@ export default function NavigationBuilderPage() {
             }
           : { ...item, children: updatePerm(item.children) },
       );
+    console.log("accessStructure", accessStructure);
     setAccessStructure(updatePerm(accessStructure));
   };
 
@@ -441,10 +479,35 @@ export default function NavigationBuilderPage() {
       });
       if (res.ok) {
         const created = await res.json();
+        // Create default access rules for each navigation item
+        const navItems = navigation; // current navigation items
+        const defaultRules = navItems.flatMap((item) =>
+          ["view", "edit", "create", "delete"].map((action) => ({
+            featureCode:
+              item.featureCode || item.name.toLowerCase().replace(/\s+/g, "-"),
+            action,
+            effect: "allow",
+            scopeLevel: "self",
+            scopeOverride: false,
+          })),
+        );
+        // Save default rules to the new access template
+        const rulesRes = await fetch(
+          `/api/feature-manager/access/templates/${created.id}/items`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: defaultRules }),
+          },
+        );
+        if (rulesRes.ok) {
+          // Refresh access templates list
+          const listRes = await fetch("/api/feature-manager/access/templates");
+          setAccessTemplates(await listRes.json());
+        } else {
+          console.warn("Failed to create default access rules:", rulesRes);
+        }
         setLinkedAccessTemplateId(created.id);
-        // Refresh access templates list
-        const listRes = await fetch("/api/feature-manager/access/templates");
-        setAccessTemplates(await listRes.json());
         return created.id;
       }
       return "";
@@ -467,25 +530,28 @@ export default function NavigationBuilderPage() {
         setNavigation(navData);
 
         if (accessRes && accessRes.ok) {
-          const rules = await accessRes.json();
+          const rules = (await accessRes.json()) as AccessItemModel[];
           const applyRules = (items: AccessItem[]): AccessItem[] =>
             items.map((item) => {
-              const fc = item.name.toLowerCase().replace(/\s+/g, "_");
-              const matching = rules.filter((r: any) =>
-                r.action.startsWith(fc),
+              const fc =
+                item.featureCode ||
+                item.name.toLowerCase().replace(/\s+/g, "_");
+              const matching = rules.filter(
+                (r) =>
+                  r.featureCode === fc &&
+                  ["view", "edit", "create", "delete"].includes(r.action),
               );
               return {
                 ...item,
-                permissions: {
-                  view: matching.some((r: any) => r.action === `${fc}:view`),
-                  edit: matching.some((r: any) => r.action === `${fc}:edit`),
-                  create: matching.some(
-                    (r: any) => r.action === `${fc}:create`,
-                  ),
-                  delete: matching.some(
-                    (r: any) => r.action === `${fc}:delete`,
-                  ),
-                },
+                permissions:
+                  matching.length > 0
+                    ? {
+                        view: matching.some((r) => r.action === "view"),
+                        edit: matching.some((r) => r.action === "edit"),
+                        create: matching.some((r) => r.action === "create"),
+                        delete: matching.some((r) => r.action === "delete"),
+                      }
+                    : item.permissions,
                 children: applyRules(item.children),
               };
             });
@@ -813,7 +879,7 @@ export default function NavigationBuilderPage() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                toggleAccessPermission(item.id, "view");
+                toggleAccessPermission(item.id, "view"); //
               }}
               title="Toggle View"
               className="p-0.5 rounded hover:bg-green-50 dark:hover:bg-green-900/20"
