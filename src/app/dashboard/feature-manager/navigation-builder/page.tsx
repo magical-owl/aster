@@ -293,6 +293,7 @@ export default function NavigationBuilderPage() {
   const [pageFeatures, setPageFeatures] = useState<any[]>([]);
   const [containers, setContainers] = useState<any[]>([]);
   const [selectedSourceItem, setSelectedSourceItem] = useState<string>("");
+  const [selectedFeatureCode, setSelectedFeatureCode] = useState<string>("");
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [accessTemplates, setAccessTemplates] = useState<any[]>([]);
@@ -348,6 +349,10 @@ export default function NavigationBuilderPage() {
       url: newItemType === "page" ? "" : undefined,
       children: [],
       expanded: true,
+      featureCode:
+        newItemType === "page" && selectedFeatureCode
+          ? selectedFeatureCode
+          : undefined,
     };
     if (newItemDialog?.type === "root") {
       setNavAndAccess([...navigation, newItem]);
@@ -364,6 +369,9 @@ export default function NavigationBuilderPage() {
     setNewItemName("");
     setSelectedIcon("Folder");
     setShowAddMenu(null);
+    setNewItemName("");
+    setSelectedIcon("Folder");
+    setSelectedFeatureCode(""); // Clear feature code when cancelling
     addToast(
       `${newItemType === "container" ? "Container" : "Page item"} created successfully`,
       "success",
@@ -978,6 +986,7 @@ export default function NavigationBuilderPage() {
                   setNewItemType(e.target.value as "page" | "container");
                   setSelectedSourceItem("");
                   setNewItemName("");
+                  setSelectedFeatureCode(""); // Clear feature code when switching type
                   setSelectedIcon(
                     e.target.value === "container" ? "Folder" : "Circle",
                   );
@@ -1001,7 +1010,10 @@ export default function NavigationBuilderPage() {
                   setSelectedSourceItem(id);
                   if (newItemType === "page") {
                     const f = pageFeatures.find((x) => x.id === id);
-                    if (f) setNewItemName(f.name);
+                    if (f) {
+                      setNewItemName(f.name);
+                      setSelectedFeatureCode(f.code);
+                    }
                   } else {
                     const c = containers.find((x) => x.id === id);
                     if (c) {
@@ -1025,6 +1037,14 @@ export default function NavigationBuilderPage() {
                       </option>
                     ))}
               </select>
+              {selectedFeatureCode && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+                  <span>Selected feature code:</span>
+                  <code className="px-2 py-1 bg-zinc-100 dark:bg-zinc-900 rounded text-xs">
+                    {selectedFeatureCode}
+                  </code>
+                </div>
+              )}
             </div>
             <div className="mb-4">
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
