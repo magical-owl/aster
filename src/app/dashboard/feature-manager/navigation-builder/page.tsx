@@ -20,7 +20,7 @@ interface NavItem {
 interface AccessItem {
   id: string;
   name: string;
-  featureCode?: string;
+  featureCode: string;
   permissions: {
     view: boolean;
     edit: boolean;
@@ -207,9 +207,14 @@ function navToAccessItem(
   existingAccess?: AccessItem[],
 ): AccessItem {
   const existing = existingAccess?.find((a) => a.id === item.id);
+
+  const featureCode =
+    item.featureCode?.trim() || item.name.toLowerCase().replace(/\s+/g, "_");
+
   return {
     id: item.id,
     name: item.name,
+    featureCode,
     permissions: {
       view: true,
       edit: existing?.permissions.edit ?? false,
@@ -227,14 +232,7 @@ function syncAccessFromNavigation(
   nav: NavItem[],
   currentAccess?: AccessItem[],
 ): AccessItem[] {
-  return nav.map((item) =>
-    item.featureCode
-      ? {
-          ...navToAccessItem(item, currentAccess),
-          featureCode: item.featureCode,
-        }
-      : navToAccessItem(item, currentAccess),
-  );
+  return nav.map((item) => navToAccessItem(item, currentAccess));
 }
 
 function flattenAccessRules(items: AccessItem[]): Array<{
@@ -252,11 +250,10 @@ function flattenAccessRules(items: AccessItem[]): Array<{
     scopeOverride: boolean;
   }> = [];
   for (const item of items) {
-    const fc = item.featureCode || item.name.toLowerCase().replace(/\s+/g, "_");
     for (const perm of ["view", "edit", "create", "delete"] as const) {
       if (item.permissions[perm]) {
         rules.push({
-          featureCode: fc,
+          featureCode: item.featureCode,
           action: perm,
           effect: "allow",
           scopeLevel: "self",
@@ -541,9 +538,7 @@ export default function NavigationBuilderPage() {
           const rules = (await accessRes.json()) as AccessItemModel[];
           const applyRules = (items: AccessItem[]): AccessItem[] =>
             items.map((item) => {
-              const fc =
-                item.featureCode ||
-                item.name.toLowerCase().replace(/\s+/g, "_");
+              const fc = item.featureCode;
               const matching = rules.filter(
                 (r) =>
                   r.featureCode === fc &&
