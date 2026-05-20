@@ -352,6 +352,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   "/dashboard/feature-manager",
                   "/dashboard/feature-manager/features",
                   "/dashboard/feature-manager/navigation-builder",
+                  "/dashboard/feature-manager/templates",
                   "/dashboard/feature-manager/role-mapping",
                 ].includes(pathname)
                   ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
@@ -373,6 +374,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     "/dashboard/feature-manager",
                     "/dashboard/feature-manager/features",
                     "/dashboard/feature-manager/navigation-builder",
+                    "/dashboard/feature-manager/templates",
                     "/dashboard/feature-manager/role-mapping",
                   ].includes(pathname)
                     ? "text-blue-600 dark:text-blue-400"
@@ -440,6 +442,29 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <Icons.Map className="w-5 h-5" />
                   </span>
                   <span className="flex-1">Navigation Builder</span>
+                </div>
+
+                {/* Navigation Templates */}
+                <div
+                  className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${
+                    pathname === "/dashboard/feature-manager/templates"
+                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  }`}
+                  onClick={() => {
+                    router.push("/dashboard/feature-manager/templates");
+                  }}
+                >
+                  <span
+                    className={
+                      pathname === "/dashboard/feature-manager/templates"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-zinc-400 dark:text-zinc-500"
+                    }
+                  >
+                    <Icons.PanelsTopLeft className="w-5 h-5" />
+                  </span>
+                  <span className="flex-1">Navigation Templates</span>
                 </div>
 
                 {/* Role Mapping */}

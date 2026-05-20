@@ -117,3 +117,26 @@ export async function PUT(
     );
   }
 }
+
+export async function DELETE(
+  request: Request,
+  props: { params: Promise<{ id: string }> },
+) {
+  try {
+    const params = await props.params;
+    const { prisma } = await currentUser();
+
+    await prisma.featureNavigationTemplate.update({
+      where: { id: params.id },
+      data: { archivedAt: new Date() },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting navigation template:", error);
+    return NextResponse.json(
+      { error: "Failed to delete template" },
+      { status: 500 },
+    );
+  }
+}
