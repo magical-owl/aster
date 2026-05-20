@@ -158,7 +158,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 0 01.707.293l5.414 5.414a1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
             </div>
@@ -167,7 +167,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 {user?.companyName
                   ? formatCompanyDisplayName(user.companyName)
                   : "Admin Panel"}
-                <span className="tooltip-text bg-zinc-800 text-white text-xs px-2 py-1 rounded absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 invisible transition-all duration-200 whitespace-nowrap shadow-lg z-50">
+                <span className="tooltip-text bg-zinc-800 text-white text-xs px-2 py-1 rounded absolute left/1/2 -translate-x-1/2 top-full mt-2 opacity-0 invisible transition-all duration-200 whitespace-nowrap shadow-lg z-50">
                   {user?.companyName || "Admin Panel"}
                 </span>
                 <style jsx>{`
@@ -231,7 +231,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 const isOpen = currentState === "true";
 
                 return (
-                  <div key={item.name} className="mt-2">
+                  <div key={item.id} className="mt-2">
                     <div
                       className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${
                         isActive
@@ -279,7 +279,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             Icons.Circle;
                           return (
                             <div
-                              key={child.name}
+                              key={child.id}
                               className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${
                                 pathname === child.url
                                   ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
@@ -318,7 +318,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               return (
                 <div
-                  key={item.name}
+                  key={item.id}
                   className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${
                     pathname === item.url
                       ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"

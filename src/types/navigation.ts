@@ -5,6 +5,7 @@ export interface NavigationItem {
   icon?: string;
   code?: string;
   url?: string;
+  id?: string | number;
   children?: NavigationItem[];
 }
 

@@ -42,20 +42,55 @@ export async function buildUserNavigation({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
+  // Extract unique featureCodes from items
+  const featureCodes = Array.from(
+    new Set(
+      allItems
+        .filter((item) => item.featureCode != null)
+        .map((item) => item.featureCode!),
+    ),
+  );
+
+  // Fetch features to get the latest paths for these featureCodes
+  let featurePathMap: Record<string, string> = {};
+  if (featureCodes.length > 0) {
+    const features = await prisma.feature.findMany({
+      where: {
+        code: { in: featureCodes },
+      },
+      select: {
+        code: true,
+        path: true,
+      },
+    });
+    featurePathMap = Object.fromEntries(
+      features.map((feature) => [feature.code, feature.path]),
+    );
+  }
+
   // Build hierarchical tree
   const buildTree = (parentId: string | null): NavigationItem[] => {
     return allItems
       .filter((item) => item.parentId === parentId)
-      .map((item) => ({
-        name: item.name,
-        type: item.type as "page" | "container",
-        alias: item.alias ?? undefined,
-        icon: item.icon ?? undefined,
-        code: item.featureCode ?? undefined,
-        url: item.url ?? undefined,
-        children:
-          buildTree(item.id).length > 0 ? buildTree(item.id) : undefined,
-      }));
+      .map((item) => {
+        // Use the feature path if available, otherwise fall back to item.url
+        const url =
+          item.featureCode && featurePathMap[item.featureCode]
+            ? featurePathMap[item.featureCode]
+            : item.url;
+
+        return {
+          name: item.name,
+          type: item.type as "page" | "container",
+          alias: item.alias ?? undefined,
+          icon: item.icon ?? undefined,
+          code: item.featureCode ?? undefined,
+          url: url ?? undefined,
+          id: item.id,
+          children:
+            buildTree(item.id).length > 0 ? buildTree(item.id) : undefined,
+        };
+      });
   };
 
   // console.log("Navigation structure built:",JSON.stringify(buildTree(null), null, 2),);

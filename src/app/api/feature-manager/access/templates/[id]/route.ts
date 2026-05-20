@@ -80,6 +80,7 @@ export async function PUT(
       });
 
       // Create new items
+      const processed = new Set<string>(); // To avoid duplicates within the same request
       for (const rule of accessRules) {
         // Resolve featureCode → featureId
         // The UI sends simplified codes like "users" (from item name),
@@ -112,6 +113,15 @@ export async function PUT(
           continue;
         }
 
+        // Create a unique key to detect duplicates within this request
+        const key = `${params.id}-${featureId}-${rule.action}`;
+        if (processed.has(key)) {
+          console.warn(`Skipping duplicate rule: ${key}`);
+          continue;
+        }
+        processed.add(key);
+
+        // After deleteMany, there are no existing items, so we always create
         await tx.featureAccessItem.create({
           data: {
             templateId: params.id,
