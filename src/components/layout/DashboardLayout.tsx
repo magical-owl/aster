@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAuth } from "@/lib/auth";
 import Sidebar from "@/components/layout/Sidebar";
+import PageAccessGuard from "@/components/layout/PageAccessGuard";
 import ClockInButton from "@/components/widgets/ClockInButton";
 import Modal from "@/components/modals/Modal";
 import SessionTimer from "@/components/widgets/SessionTimer";
@@ -334,7 +335,9 @@ export default function DashboardLayout({
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+            <PageAccessGuard>{children}</PageAccessGuard>
+          </main>
         </div>
       </div>
     </div>
