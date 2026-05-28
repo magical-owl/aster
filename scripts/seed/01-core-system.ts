@@ -950,12 +950,127 @@ async function seedCoreSystem() {
     });
     console.log(`✅ Admin profile created`);
 
+    // ---------------------------------------------------------------------------
+    // 13. Leave Types
+    // ---------------------------------------------------------------------------
+    console.log("\n13/14 - Seeding leave types");
+    const leaveTypes = [
+      {
+        name: "Vacation Leave",
+        description: "Paid time off for rest, recreation, or travel",
+        defaultDaysLimit: 15,
+        color: "purple",
+      },
+      {
+        name: "Sick Leave",
+        description: "Time off for illness or medical appointments",
+        defaultDaysLimit: 15,
+        color: "red",
+      },
+      {
+        name: "Personal Leave",
+        description: "Time off for personal matters or emergencies",
+        defaultDaysLimit: 5,
+        color: "orange",
+      },
+      {
+        name: "Emergency Leave",
+        description: "Unplanned time off for urgent situations",
+        defaultDaysLimit: 5,
+        color: "red",
+      },
+      {
+        name: "Bereavement Leave",
+        description: "Time off following the death of a family member",
+        defaultDaysLimit: 5,
+        color: "gray",
+      },
+      {
+        name: "Maternity Leave",
+        description: "Leave for childbirth and newborn care",
+        defaultDaysLimit: 90,
+        color: "pink",
+      },
+      {
+        name: "Paternity Leave",
+        description: "Leave for new fathers",
+        defaultDaysLimit: 15,
+        color: "blue",
+      },
+    ];
+
+    for (const leaveType of leaveTypes) {
+      await prisma.leaveType.upsert({
+        where: {
+          companyId_name: {
+            companyId: defaultCompany.id,
+            name: leaveType.name,
+          },
+        },
+        update: leaveType,
+        create: {
+          ...leaveType,
+          companyId: defaultCompany.id,
+        },
+      });
+    }
+    console.log(`✅ ${leaveTypes.length} leave types created`);
+
+    // ---------------------------------------------------------------------------
+    // 14. Leave Statuses
+    // ---------------------------------------------------------------------------
+    console.log("\n14/14 - Seeding leave statuses");
+    const leaveStatuses = [
+      {
+        name: "Pending",
+        description: "Leave request is awaiting approval",
+        color: "yellow",
+        isFinal: false,
+      },
+      {
+        name: "Approved",
+        description: "Leave request has been approved",
+        color: "green",
+        isFinal: true,
+      },
+      {
+        name: "Denied",
+        description: "Leave request has been rejected",
+        color: "red",
+        isFinal: true,
+      },
+      {
+        name: "Cancelled",
+        description: "Leave request was cancelled by the employee",
+        color: "gray",
+        isFinal: true,
+      },
+    ];
+
+    for (const status of leaveStatuses) {
+      await prisma.leaveStatus.upsert({
+        where: {
+          companyId_name: {
+            companyId: defaultCompany.id,
+            name: status.name,
+          },
+        },
+        update: status,
+        create: {
+          ...status,
+          companyId: defaultCompany.id,
+        },
+      });
+    }
+    console.log(`✅ ${leaveStatuses.length} leave statuses created`);
+
     console.log("\n✅ Phase 1 Core System Seeding Complete!");
     console.log("\n📋 Summary:");
-    console.log("   - 12 core tables seeded");
+    console.log("   - 14 core tables seeded");
     console.log("   - Default company created");
     console.log("   - System roles and statuses initialized");
     console.log("   - Permission and navigation system setup");
+    console.log("   - Leave types and statuses configured");
     console.log(
       "   - Default admin user created (username: admin, password: admin123)",
     );

@@ -52,7 +52,7 @@ export const GET = withAuth(
       }
 
       if (statusId) {
-        whereClause.statusId = parseInt(statusId);
+        whereClause.statusId = statusId;
       }
 
       // If teamId is provided, get all team members and filter by their requests
@@ -202,11 +202,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get status IDs for overlap checks
+    const approvedStatus = await prisma.leaveStatus.findFirst({
+      where: { name: "Approved" },
+    });
+
     // Check for overlapping approved leaves
     const overlappingApprovedLeaves = await prisma.leaveRequest.findFirst({
       where: {
         userId: userId,
-        statusId: 2, // Approved status
+        statusId: approvedStatus?.id || "",
         OR: [
           {
             startDate: { lte: end },
@@ -231,7 +236,7 @@ export async function POST(request: NextRequest) {
     const overlappingPendingLeaves = await prisma.leaveRequest.findFirst({
       where: {
         userId: userId,
-        statusId: pendingStatus?.id || 1,
+        statusId: pendingStatus?.id || "",
         OR: [
           {
             startDate: { lte: end },
@@ -250,6 +255,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const deniedStatus = await prisma.leaveStatus.findFirst({
+      where: { name: "Denied" },
+    });
+
     // Check for exact duplicate (same dates and same leave type)
     const duplicateRequest = await prisma.leaveRequest.findFirst({
       where: {
@@ -258,7 +267,7 @@ export async function POST(request: NextRequest) {
         startDate: start,
         endDate: end,
         statusId: {
-          not: 3, // Not denied
+          not: deniedStatus?.id || "",
         },
       },
     });
@@ -282,7 +291,7 @@ export async function POST(request: NextRequest) {
         userId: userId,
         companyId: session?.user?.companyId,
         leaveTypeId: leaveTypeId,
-        statusId: pendingStatus?.id || 1,
+        statusId: pendingStatus?.id || "",
         startDate: start,
         endDate: end,
         reason: reason || null,

@@ -13,10 +13,11 @@ import {
   Textarea,
   SubmitButton,
 } from "@/components/form";
+import { useToast } from "@/lib/toast";
 
 const LeaveRequestSchema = z
   .object({
-    leaveTypeId: z.coerce.number().int().min(1, "Please select a leave type"),
+    leaveTypeId: z.string().min(1, "Please select a leave type"),
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
     reason: z.string().optional(),
@@ -67,6 +68,7 @@ interface LeaveCredit {
 
 export default function LeaveRequestPage() {
   const { user, isLoading } = useAuth();
+  const { addToast } = useToast();
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [myRequests, setMyRequests] = useState<LeaveRequest[]>([]);
   const [credits, setCredits] = useState<LeaveCredit | null>(null);
@@ -145,16 +147,23 @@ export default function LeaveRequestPage() {
 
       if (response.ok) {
         setSuccess("Leave request submitted successfully!");
+        addToast("Leave request submitted successfully!", "success");
         fetchMyRequests();
         fetchCredits();
         // Clear success message after 5 seconds
         setTimeout(() => setSuccess(""), 5000);
+      } else if (data.error === "Insufficient leave credits") {
+        const message =
+          data.availableCredits !== undefined
+            ? `Insufficient leave credits. You have ${data.availableCredits} available but need ${data.requestedDays}.`
+            : "Insufficient leave credits.";
+        addToast(message, "error");
       } else {
-        throw new Error(data.error || "Failed to submit leave request");
+        addToast(data.error || "Failed to submit leave request", "error");
       }
     } catch (error) {
+      addToast("An unexpected error occurred. Please try again.", "error");
       console.error("Error submitting leave request:", error);
-      throw error;
     }
   };
 
@@ -253,7 +262,7 @@ export default function LeaveRequestPage() {
             <Form<LeaveRequestFormData>
               schema={LeaveRequestSchema}
               defaultValues={{
-                leaveTypeId: 0,
+                leaveTypeId: "",
                 startDate: "",
                 endDate: "",
                 reason: "",
