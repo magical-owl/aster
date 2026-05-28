@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import type { UserNavigation } from "./navigation";
 
 declare module "next-auth" {
   interface User {

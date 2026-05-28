@@ -5,4 +5,6 @@ export * from "./team.schema";
 export * from "./calendar.schema";
 export * from "./schedule.schema";
 export * from "./infraction.schema";
+export * from "./feature.schema";
+export * from "./role-navigation.schema";
 export * from "./api.middleware";

@@ -10,7 +10,7 @@ export const SESSION_CONFIG = {
    * Default: 15 seconds (for development)
    * Production recommended: 3600 (1 hour) or 28800 (8 hours)
    */
-  maxAge: 320,
+  maxAge: 3600,
 
   /**
    * Session update threshold in seconds
