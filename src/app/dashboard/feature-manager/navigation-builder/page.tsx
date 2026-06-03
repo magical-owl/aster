@@ -500,7 +500,7 @@ export default function NavigationBuilderPage() {
     }
 
     return (
-      <div key={item.id} className="group">
+      <div key={item.id} className="group relative">
         <div
           className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${isActive ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-zinc-100 dark:hover:bg-zinc-700"}`}
           style={{ marginLeft: `${depth * 28}px` }}
@@ -541,43 +541,17 @@ export default function NavigationBuilderPage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowAddMenu(showAddMenu === item.id ? null : item.id);
+                  setNewItemDialog({ type: "child", parentId: item.id });
+                  setNewItemType("page");
+                  setNewItemName("");
+                  setSelectedIcon("Circle");
+                  setIconSearch("");
                 }}
                 className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-zinc-500 hover:text-blue-600"
                 title="Add child item"
               >
                 <Icons.Plus className="w-4 h-4" />
               </button>
-            )}
-            {showAddMenu === item.id && (
-              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg p-1 min-w-[160px]">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setNewItemDialog({ type: "child", parentId: item.id });
-                    setNewItemType("page");
-                    setNewItemName("");
-                    setSelectedIcon("Circle");
-                    setIconSearch("");
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-left text-zinc-700 dark:text-zinc-300"
-                >
-                  <Icons.Link className="w-4 h-4" /> Add Page Item
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setNewItemDialog({ type: "child", parentId: item.id });
-                    setNewItemType("container");
-                    setNewItemName("");
-                    setSelectedIcon("Folder");
-                    setIconSearch("");
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-left text-zinc-700 dark:text-zinc-300"
-                >
-                  <Icons.Folder className="w-4 h-4" /> Add Container
-                </button>
-              </div>
             )}
             <button
               onClick={(e) => {
@@ -916,7 +890,7 @@ export default function NavigationBuilderPage() {
               </select>
             </div>
           </div>
-          <div className="p-4 flex-1 overflow-y-auto min-h-0">
+          <div className="p-4 flex-1 overflow-y-auto min-h-[250px]">
             <div className="space-y-1">
               {navigation.map((item) => renderNavItem(item))}
             </div>
@@ -951,7 +925,7 @@ export default function NavigationBuilderPage() {
               </span>
             </div>
           </div>
-          <div className="p-4 flex-1 overflow-y-auto min-h-0">
+          <div className="p-4 flex-1 overflow-y-auto min-h-[250px]">
             {accessStructure.length === 0 ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-8">
                 No items. Add items to the Navigation Structure to see them
@@ -973,7 +947,7 @@ export default function NavigationBuilderPage() {
               Live Preview
             </h3>
           </div>
-          <div className="p-4 flex-1 overflow-y-auto min-h-0">
+          <div className="p-4 flex-1 overflow-y-auto min-h-[250px]">
             <div className="w-full border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
               <div className="p-4 border-b border-zinc-200 dark:border-zinc-700 flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
