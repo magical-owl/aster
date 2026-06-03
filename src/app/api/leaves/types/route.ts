@@ -13,7 +13,7 @@ export async function GET() {
 
     const leaveTypes = await prisma.leaveType.findMany({
       where: {
-        isActive: true,
+        archivedAt: null,
         companyId: session.user.companyId,
       },
       orderBy: { name: "asc" },
