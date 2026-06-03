@@ -1,3 +1,11 @@
+export interface NavigationItemPermissions {
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+  approve: boolean;
+}
+
 export interface NavigationItem {
   name: string;
   type: "page" | "container";
@@ -7,6 +15,7 @@ export interface NavigationItem {
   url?: string;
   id?: string | number;
   children?: NavigationItem[];
+  permissions?: NavigationItemPermissions;
 }
 
 export interface UserNavigation {

@@ -156,13 +156,12 @@ model User {
   performedStatusHistory  EmployeeStatusHistory[] @relation("EmployeeStatusHistoryPerformedBy")
 
   // Archive Audit Relations
-  archivedLeaveTypes LeaveType[] @relation("LeaveTypeArchivedBy")
-  archivedInfractionTypes InfractionType[] @relation("InfractionTypeArchivedBy")
-  archivedInfractionOffenses InfractionOffense[] @relation("InfractionOffenseArchivedBy")
-  archivedFeatures Feature[] @relation("FeatureArchivedBy")
-  archivedAccessTemplates FeatureAccessTemplate[] @relation("AccessTemplateArchivedBy")
-  archivedNavTemplates FeatureNavigationTemplate[] @relation("NavTemplateArchivedBy")
-  archivedRoleNavigations RoleNavigation[] @relation("RoleNavigationArchivedBy")
+  archivedLeaveTypes       LeaveType[]                @relation("LeaveTypeArchivedBy")
+  archivedInfractionTypes  InfractionType[]           @relation("InfractionTypeArchivedBy")
+  archivedInfractionOffenses InfractionOffense[]      @relation("InfractionOffenseArchivedBy")
+  archivedFeatures         Feature[]                  @relation("FeatureArchivedBy")
+  archivedNavTemplates     FeatureNavigationTemplate[] @relation("NavTemplateArchivedBy")
+  archivedRoleNavigations  RoleNavigation[]            @relation("RoleNavigationArchivedBy")
 
   @@index([companyId], map: "users_company_id_fkey")
   @@map("users")
@@ -625,7 +624,6 @@ model Feature {
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
-  templateItems         FeatureAccessItem[]
   FeatureNavigationItem FeatureNavigationItem[]
   archivedByUser        User? @relation("FeatureArchivedBy", fields: [archivedBy], references: [id])
 
@@ -633,64 +631,6 @@ model Feature {
   @@unique([path, httpMethod], map: "uq_feature_path_method")
   @@index([archivedBy])
   @@map("features")
-}
-
-model FeatureAccessTemplate {
-  id          String     @id @default(uuid())
-  code        String     @db.VarChar(100)
-  name        String     @db.VarChar(120)
-  description String?    @db.Text
-  domain      String?    @db.VarChar(50)
-  scopeLevel  ScopeLevel @map("scope_level")
-  isSystem    Boolean    @default(false) @map("is_system")
-  archivedAt  DateTime?  @map("archived_at")
-  archivedBy  String?    @map("archived_by")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-
-  items      FeatureAccessItem[]
-  roleAccess RoleAccess[]
-  archivedByUser User? @relation("AccessTemplateArchivedBy", fields: [archivedBy], references: [id])
-
-  @@unique([code], map: "uq_template_code")
-  @@index([archivedBy])
-  @@map("feature_access_templates")
-}
-
-model FeatureAccessItem {
-  id            String      @id @default(uuid())
-  templateId    String      @map("template_id")
-  featureId     String      @map("feature_id")
-  action        String      @db.VarChar(30)
-  effect        EffectType
-  scopeLevel    ScopeLevel? @map("scope_level")
-  scopeOverride Boolean     @default(false) @map("scope_override")
-  createdAt     DateTime    @default(now()) @map("created_at")
-
-  template FeatureAccessTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  feature  Feature               @relation(fields: [featureId], references: [id], onDelete: Cascade)
-
-  @@unique([templateId, featureId, action], map: "uq_template_feature_action")
-  @@index([templateId], map: "item_template_id_fkey")
-  @@index([featureId], map: "item_feature_id_fkey")
-  @@map("feature_access_template_items")
-}
-
-model RoleAccess {
-  id         String   @id @default(uuid())
-  companyId  String   @map("company_id")
-  roleId     String   @map("role_id")
-  templateId String   @map("template_id")
-  priority   Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  template FeatureAccessTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@unique([companyId, roleId, templateId], map: "uq_role_template")
-  @@index([companyId], map: "role_access_company_id_idx")
-  @@index([roleId], map: "role_access_role_id_idx")
-  @@index([templateId], map: "role_access_template_id_fkey")
-  @@map("role_access")
 }
 
 model FeatureNavigationTemplate {
@@ -728,6 +668,7 @@ model FeatureNavigationItem {
   sortOrder   Int      @default(0) @map("sort_order")
   featureCode String?  @map("feature_code") @db.VarChar(150)
   url         String?  @db.VarChar(255)
+  permissions Json?    @default("{\"view\": true, \"create\": false, \"edit\": false, \"delete\": false, \"approve\": false}")
   createdAt   DateTime @default(now()) @map("created_at")
 
   template FeatureNavigationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)

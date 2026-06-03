@@ -1,31 +1,33 @@
 /**
  * Phase 1: Core System Seeder
- * Seeds the 12 absolute minimum required tables for system operation
+ * Seeds the absolute minimum required tables for system operation
  *
  * Execution Order:
  * 1. companies
  * 2. employee_statuses
  * 3. roles
  * 4. features
- * 5. feature_access_templates
- * 6. feature_access_template_items
- * 7. feature_navigation_templates
- * 8. feature_navigation_items
- * 9. role_access
- * 10. role_navigations
- * 11. users
- * 12. employee_profiles
+ * 5. feature_navigation_templates
+ * 6. feature_navigation_items
+ * 7. role_navigations
+ * 8. users
+ * 9. employee_profiles
+ * 10. leave_types
+ * 11. leave_statuses
  */
 
-import {
-  PrismaClient,
-  FeatureKind,
-  ScopeLevel,
-  EffectType,
-} from "@prisma/client";
+import { PrismaClient, FeatureKind } from "@prisma/client";
 import { hashPassword, generateSalt } from "../../src/lib/password";
 
 const prisma = new PrismaClient();
+
+const defaultPermissions = {
+  view: true,
+  create: false,
+  edit: false,
+  delete: false,
+  approve: false,
+};
 
 async function seedCoreSystem() {
   try {
@@ -34,7 +36,7 @@ async function seedCoreSystem() {
     // ---------------------------------------------------------------------------
     // 1. Default Company
     // ---------------------------------------------------------------------------
-    console.log("\n1/12 - Seeding default company");
+    console.log("\n1/11 - Seeding default company");
     const defaultCompany = await prisma.company.upsert({
       where: { id: "00000000-0000-0000-0000-000000000001" },
       update: {},
@@ -50,7 +52,7 @@ async function seedCoreSystem() {
     // ---------------------------------------------------------------------------
     // 2. Employee Statuses
     // ---------------------------------------------------------------------------
-    console.log("\n2/12 - Seeding employee statuses");
+    console.log("\n2/11 - Seeding employee statuses");
     const employeeStatuses = [
       {
         id: "00000000-0000-0000-0000-000000000101",
@@ -90,7 +92,7 @@ async function seedCoreSystem() {
     // ---------------------------------------------------------------------------
     // 3. System Roles
     // ---------------------------------------------------------------------------
-    console.log("\n3/12 - Seeding system roles");
+    console.log("\n3/11 - Seeding system roles");
     const roles = [
       {
         id: "00000000-0000-0000-0000-000000000201",
@@ -130,7 +132,7 @@ async function seedCoreSystem() {
     // ---------------------------------------------------------------------------
     // 4. Core Features
     // ---------------------------------------------------------------------------
-    console.log("\n4/12 - Seeding core system features");
+    console.log("\n4/11 - Seeding core system features");
     const features = [
       {
         id: "00000000-0000-0000-0000-000000001001",
@@ -173,7 +175,6 @@ async function seedCoreSystem() {
         name: "Get current user",
         domain: "auth",
       },
-      // Legacy features integration start
       {
         id: "00000000-0000-0000-0000-000000001006",
         code: "dashboard.admin.settings",
@@ -318,7 +319,6 @@ async function seedCoreSystem() {
         description: "Map roles to navigation templates",
         domain: "feature-manager",
       },
-      // Legacy features integration end
     ];
 
     for (const feature of features) {
@@ -331,234 +331,9 @@ async function seedCoreSystem() {
     console.log(`✅ ${features.length} core features created`);
 
     // ---------------------------------------------------------------------------
-    // 5. Feature Access Templates
+    // 5. Navigation Templates
     // ---------------------------------------------------------------------------
-    console.log("\n5/12 - Seeding feature access templates");
-    const accessTemplates = [
-      {
-        id: "00000000-0000-0000-0000-000000002001",
-        code: "full-access",
-        name: "Full System Access",
-        scopeLevel: ScopeLevel.company,
-        isSystem: true,
-      },
-      {
-        id: "00000000-0000-0000-0000-000000002002",
-        code: "employee-basic",
-        name: "Employee Basic Access",
-        scopeLevel: ScopeLevel.self,
-        isSystem: true,
-      },
-    ];
-
-    for (const template of accessTemplates) {
-      await prisma.featureAccessTemplate.upsert({
-        where: { id: template.id },
-        update: {},
-        create: template,
-      });
-    }
-    console.log(`✅ ${accessTemplates.length} access templates created`);
-
-    // ---------------------------------------------------------------------------
-    // 6. Access Template Items
-    // ---------------------------------------------------------------------------
-    console.log("\n6/12 - Seeding access template items");
-    const templateItems = [
-      // Full Access Template - All features
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[0].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[1].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[2].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[3].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[4].id,
-        action: "execute",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      // New features added to full access
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[5].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[6].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[7].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[8].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[9].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[10].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[11].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[12].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[13].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[14].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[15].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[16].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-
-      {
-        templateId: accessTemplates[1].id,
-        featureId: features[0].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.self,
-      },
-      {
-        templateId: accessTemplates[1].id,
-        featureId: features[2].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.self,
-      },
-      {
-        templateId: accessTemplates[1].id,
-        featureId: features[4].id,
-        action: "execute",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.self,
-      },
-
-      // Feature Manager pages added to full access
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[17].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[18].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[19].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-      {
-        templateId: accessTemplates[0].id,
-        featureId: features[20].id,
-        action: "view",
-        effect: EffectType.allow,
-        scopeLevel: ScopeLevel.company,
-      },
-    ];
-
-    for (const item of templateItems) {
-      await prisma.featureAccessItem.upsert({
-        where: {
-          templateId_featureId_action: {
-            templateId: item.templateId,
-            featureId: item.featureId,
-            action: item.action,
-          },
-        },
-        update: {},
-        create: item,
-      });
-    }
-    console.log(`✅ ${templateItems.length} template items created`);
-
-    // ---------------------------------------------------------------------------
-    // 7. Navigation Templates
-    // ---------------------------------------------------------------------------
-    console.log("\n7/12 - Seeding navigation templates");
+    console.log("\n5/11 - Seeding navigation templates");
     const navTemplates = [
       {
         id: "00000000-0000-0000-0000-000000003001",
@@ -584,9 +359,9 @@ async function seedCoreSystem() {
     console.log(`✅ ${navTemplates.length} navigation templates created`);
 
     // ---------------------------------------------------------------------------
-    // 8. Navigation Items
+    // 6. Navigation Items
     // ---------------------------------------------------------------------------
-    console.log("\n8/12 - Seeding navigation items");
+    console.log("\n6/11 - Seeding navigation items");
     const navItems = [
       {
         templateId: navTemplates[0].id,
@@ -597,6 +372,7 @@ async function seedCoreSystem() {
         icon: "home",
         url: "/dashboard",
         featureCode: "dashboard.view",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -607,6 +383,7 @@ async function seedCoreSystem() {
         icon: "bar-chart",
         url: "/dashboard/analytics",
         featureCode: "dashboard.analytics",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -617,6 +394,7 @@ async function seedCoreSystem() {
         icon: "calendar",
         url: "/dashboard/calendar",
         featureCode: "dashboard.calendar",
+        permissions: defaultPermissions,
       },
       // Management Container
       {
@@ -626,6 +404,7 @@ async function seedCoreSystem() {
         type: "container",
         sortOrder: 4,
         icon: "folder",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -637,6 +416,7 @@ async function seedCoreSystem() {
         icon: "users",
         url: "/dashboard/users",
         featureCode: "users.view",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -648,6 +428,7 @@ async function seedCoreSystem() {
         icon: "building",
         url: "/dashboard/brands",
         featureCode: "dashboard.brands",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -659,6 +440,7 @@ async function seedCoreSystem() {
         icon: "users-2",
         url: "/dashboard/teams",
         featureCode: "dashboard.teams",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -670,6 +452,7 @@ async function seedCoreSystem() {
         icon: "alert-triangle",
         url: "/dashboard/infractions",
         featureCode: "dashboard.infractions",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -681,6 +464,7 @@ async function seedCoreSystem() {
         icon: "clock",
         url: "/dashboard/schedules",
         featureCode: "dashboard.schedules",
+        permissions: defaultPermissions,
       },
       // Feature Manager Container (Access & Navigation)
       {
@@ -690,6 +474,7 @@ async function seedCoreSystem() {
         type: "container",
         sortOrder: 6,
         icon: "settings",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -701,6 +486,7 @@ async function seedCoreSystem() {
         icon: "list",
         url: "/dashboard/feature-manager",
         featureCode: "feature-manager",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -712,6 +498,7 @@ async function seedCoreSystem() {
         icon: "map",
         url: "/dashboard/feature-manager/navigation-builder",
         featureCode: "feature-manager.navigation-builder",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -723,6 +510,7 @@ async function seedCoreSystem() {
         icon: "panels-top-left",
         url: "/dashboard/feature-manager/templates",
         featureCode: "feature-manager.templates",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -734,6 +522,7 @@ async function seedCoreSystem() {
         icon: "key",
         url: "/dashboard/feature-manager/role-mapping",
         featureCode: "feature-manager.role-mapping",
+        permissions: defaultPermissions,
       },
       // Personal Container
       {
@@ -743,6 +532,7 @@ async function seedCoreSystem() {
         type: "container",
         sortOrder: 7,
         icon: "user",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -754,6 +544,7 @@ async function seedCoreSystem() {
         icon: "file-text",
         url: "/dashboard/leaves/request",
         featureCode: "dashboard.leaves.request",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -765,6 +556,7 @@ async function seedCoreSystem() {
         icon: "file-text",
         url: "/dashboard/leaves/my-requests",
         featureCode: "dashboard.leaves.request",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
@@ -776,17 +568,20 @@ async function seedCoreSystem() {
         icon: "alert-circle",
         url: "/dashboard/my-infractions",
         featureCode: "dashboard.my-infractions",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[0].id,
         code: "settings",
         name: "Settings",
         type: "link",
-        sortOrder: 6,
+        sortOrder: 8,
         icon: "settings",
         url: "/dashboard/settings",
         featureCode: "settings.view",
+        permissions: defaultPermissions,
       },
+      // Employee template
       {
         templateId: navTemplates[1].id,
         code: "dashboard",
@@ -796,6 +591,7 @@ async function seedCoreSystem() {
         icon: "home",
         url: "/dashboard",
         featureCode: "dashboard.view",
+        permissions: defaultPermissions,
       },
       {
         templateId: navTemplates[1].id,
@@ -806,6 +602,7 @@ async function seedCoreSystem() {
         icon: "user",
         url: "/dashboard/profile",
         featureCode: "profile.view",
+        permissions: defaultPermissions,
       },
     ];
 
@@ -825,55 +622,9 @@ async function seedCoreSystem() {
     console.log(`✅ ${navItems.length} navigation items created`);
 
     // ---------------------------------------------------------------------------
-    // 9. Role Access Assignments
+    // 7. Role Navigation Assignments
     // ---------------------------------------------------------------------------
-    console.log("\n9/12 - Seeding role access mappings");
-    const roleAccess = [
-      {
-        companyId: defaultCompany.id,
-        roleId: roles[0].id,
-        templateId: accessTemplates[0].id,
-        priority: 1,
-      },
-      {
-        companyId: defaultCompany.id,
-        roleId: roles[1].id,
-        templateId: accessTemplates[0].id,
-        priority: 1,
-      },
-      {
-        companyId: defaultCompany.id,
-        roleId: roles[2].id,
-        templateId: accessTemplates[1].id,
-        priority: 1,
-      },
-      {
-        companyId: defaultCompany.id,
-        roleId: roles[3].id,
-        templateId: accessTemplates[1].id,
-        priority: 1,
-      },
-    ];
-
-    for (const access of roleAccess) {
-      await prisma.roleAccess.upsert({
-        where: {
-          companyId_roleId_templateId: {
-            companyId: access.companyId,
-            roleId: access.roleId,
-            templateId: access.templateId,
-          },
-        },
-        update: {},
-        create: access,
-      });
-    }
-    console.log(`✅ ${roleAccess.length} role access assignments created`);
-
-    // ---------------------------------------------------------------------------
-    // 10. Role Navigation Assignments
-    // ---------------------------------------------------------------------------
-    console.log("\n10/12 - Seeding role navigation mappings");
+    console.log("\n7/11 - Seeding role navigation mappings");
     const roleNavigations = [
       {
         companyId: defaultCompany.id,
@@ -914,9 +665,9 @@ async function seedCoreSystem() {
     );
 
     // ---------------------------------------------------------------------------
-    // 11. Default Admin User
+    // 8. Default Admin User
     // ---------------------------------------------------------------------------
-    console.log("\n11/12 - Seeding default admin user");
+    console.log("\n8/11 - Seeding default admin user");
     const adminSalt = await generateSalt();
     const adminPasswordHash = await hashPassword("admin123", adminSalt);
 
@@ -934,9 +685,9 @@ async function seedCoreSystem() {
     console.log(`✅ Admin user created: ${adminUser.username}`);
 
     // ---------------------------------------------------------------------------
-    // 12. Admin Employee Profile
+    // 9. Admin Employee Profile
     // ---------------------------------------------------------------------------
-    console.log("\n12/12 - Seeding admin employee profile");
+    console.log("\n9/11 - Seeding admin employee profile");
     await prisma.employeeProfile.upsert({
       where: { userId: adminUser.id },
       update: {},
@@ -951,9 +702,9 @@ async function seedCoreSystem() {
     console.log(`✅ Admin profile created`);
 
     // ---------------------------------------------------------------------------
-    // 13. Leave Types
+    // 10. Leave Types
     // ---------------------------------------------------------------------------
-    console.log("\n13/14 - Seeding leave types");
+    console.log("\n10/11 - Seeding leave types");
     const leaveTypes = [
       {
         name: "Vacation Leave",
@@ -1017,9 +768,9 @@ async function seedCoreSystem() {
     console.log(`✅ ${leaveTypes.length} leave types created`);
 
     // ---------------------------------------------------------------------------
-    // 14. Leave Statuses
+    // 11. Leave Statuses
     // ---------------------------------------------------------------------------
-    console.log("\n14/14 - Seeding leave statuses");
+    console.log("\n11/11 - Seeding leave statuses");
     const leaveStatuses = [
       {
         name: "Pending",
@@ -1066,10 +817,10 @@ async function seedCoreSystem() {
 
     console.log("\n✅ Phase 1 Core System Seeding Complete!");
     console.log("\n📋 Summary:");
-    console.log("   - 14 core tables seeded");
+    console.log("   - 11 core tables seeded");
     console.log("   - Default company created");
     console.log("   - System roles and statuses initialized");
-    console.log("   - Permission and navigation system setup");
+    console.log("   - Navigation system with embedded permissions");
     console.log("   - Leave types and statuses configured");
     console.log(
       "   - Default admin user created (username: admin, password: admin123)",

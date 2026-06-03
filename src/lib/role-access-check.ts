@@ -71,10 +71,11 @@ export async function checkPageAccess(
   roleId: string,
   pathname: string,
 ): Promise<PageAccessResult> {
-  // Super admin bypass — allow access to navigation builder
+  // Super admin bypass — allow full access to feature-manager section
   if (
     roleId === SUPER_ADMIN_ROLE_ID &&
-    pathname === "/dashboard/feature-manager/navigation-builder"
+    (pathname.startsWith("/dashboard/feature-manager") ||
+      pathname === "/dashboard/feature-manager")
   ) {
     return { authorized: true };
   }
