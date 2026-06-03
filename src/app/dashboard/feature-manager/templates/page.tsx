@@ -40,24 +40,8 @@ export default function NavigationTemplatesPage() {
     fetchTemplates();
   }, [addToast]);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this template?")) {
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `/api/feature-manager/navigation/templates/${id}`,
-        { method: "DELETE" },
-      );
-
-      if (!res.ok) throw new Error("Failed to delete template");
-      setTemplates((prev) => prev.filter((t) => t.id !== id));
-      addToast("Template deleted successfully", "success");
-    } catch (error) {
-      addToast("Failed to delete template", "error");
-      console.error("Delete error:", error);
-    }
+  const handleDelete = (id: string) => {
+    router.push(`/dashboard/feature-manager/templates/delete/${id}`);
   };
 
   const columns: ColumnDef<Template>[] = [
