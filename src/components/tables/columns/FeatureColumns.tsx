@@ -133,7 +133,7 @@ export const columns: ColumnDef<Feature>[] = [
       return (
         <div className="text-right">
           <Link
-            href={`/dashboard/feature-manager/${featureId}/edit`}
+            href={`/dashboard/feature-manager/edit/${featureId}`}
             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
           >
             Edit

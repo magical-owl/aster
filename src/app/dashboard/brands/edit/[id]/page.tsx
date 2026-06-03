@@ -65,7 +65,7 @@ export default function EditBrandPage({
       }
 
       addToast("Brand updated successfully", "success");
-      router.push(`/dashboard/brands/${resolvedParams.id}`);
+      router.push(`/dashboard/brands/view/${resolvedParams.id}`);
       router.refresh();
     } catch (err) {
       addToast(

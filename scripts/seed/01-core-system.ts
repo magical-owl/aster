@@ -233,7 +233,7 @@ async function seedCoreSystem() {
         id: "00000000-0000-0000-0000-000000001012",
         code: "dashboard.infractions.create",
         kind: FeatureKind.page,
-        path: "/dashboard/infractions/new",
+        path: "/dashboard/infractions/create",
         name: "Create Infraction",
         description: "Create new infraction record",
         domain: "infractions",

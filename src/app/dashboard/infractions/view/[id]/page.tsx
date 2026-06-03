@@ -225,7 +225,7 @@ export default function ViewInfractionPage() {
         {/* Action Buttons */}
         <div className="flex gap-3">
           <Link
-            href={`/dashboard/infractions/${infraction.id}/edit`}
+            href={`/dashboard/infractions/edit/${infraction.id}`}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
           >
             Edit Infraction

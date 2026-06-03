@@ -53,7 +53,7 @@ export const columns: ColumnDef<Team>[] = [
       const brand = row.original.brand;
       return (
         <Link
-          href={`/dashboard/brands/${brand.id}`}
+          href={`/dashboard/brands/view/${brand.id}`}
           className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
         >
           {brand.name}
@@ -109,13 +109,13 @@ export const columns: ColumnDef<Team>[] = [
       return (
         <div className="text-right space-x-2">
           <Link
-            href={`/dashboard/teams/${teamId}`}
+            href={`/dashboard/teams/view/${teamId}`}
             className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm font-medium"
           >
             View
           </Link>
           <Link
-            href={`/dashboard/teams/${teamId}/edit`}
+            href={`/dashboard/teams/edit/${teamId}`}
             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
           >
             Edit

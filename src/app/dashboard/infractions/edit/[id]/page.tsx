@@ -190,7 +190,7 @@ export default function EditInfractionPage() {
       });
 
       if (response.ok) {
-        router.push(`/dashboard/infractions/${params.id}`);
+        router.push(`/dashboard/infractions/view/${params.id}`);
       } else {
         const data = await response.json();
         alert(data.error || "Failed to update infraction");
@@ -400,7 +400,7 @@ export default function EditInfractionPage() {
           {/* Actions */}
           <div className="flex gap-3">
             <Link
-              href={`/dashboard/infractions/${params.id}`}
+              href={`/dashboard/infractions/view/${params.id}`}
               className="flex-1 py-2 px-4 bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-800 dark:text-zinc-200 font-medium rounded-lg transition-colors text-center"
             >
               Cancel

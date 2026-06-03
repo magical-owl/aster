@@ -184,13 +184,13 @@ export const columns: ColumnDef<Brand>[] = [
       return (
         <div className="text-right space-x-2">
           <Link
-            href={`/dashboard/brands/${brandId}`}
+            href={`/dashboard/brands/view/${brandId}`}
             className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm font-medium"
           >
             View
           </Link>
           <Link
-            href={`/dashboard/brands/${brandId}/edit`}
+            href={`/dashboard/brands/edit/${brandId}`}
             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
           >
             Edit

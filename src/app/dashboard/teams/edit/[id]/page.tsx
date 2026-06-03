@@ -96,7 +96,7 @@ export default function EditTeamPage({
         throw new Error(result.error || "Failed to update team");
       }
 
-      router.push(`/dashboard/teams/${resolvedParams.id}`);
+      router.push(`/dashboard/teams/view/${resolvedParams.id}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
