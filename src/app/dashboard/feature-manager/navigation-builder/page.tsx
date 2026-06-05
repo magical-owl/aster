@@ -344,6 +344,22 @@ export default function NavigationBuilderPage() {
     setNavigation(updatePerm(navigation));
   };
 
+  const toggleAllPermissions = (itemId: string, state: boolean) => {
+    const updatePerm = (items: NavItem[]): NavItem[] =>
+      items.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              permissions: Object.keys(item.permissions).reduce(
+                (acc, key) => ({ ...acc, [key]: state }),
+                {} as NavigationItemPermissions,
+              ),
+            }
+          : { ...item, children: updatePerm(item.children) },
+      );
+    setNavigation(updatePerm(navigation));
+  };
+
   const copyToClipboard = (data: any) => {
     navigator.clipboard.writeText(JSON.stringify(data, null, 2));
     addToast("JSON copied to clipboard", "success");
@@ -612,6 +628,24 @@ export default function NavigationBuilderPage() {
             <div className="w-4 shrink-0" />
           )}
           <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleAllPermissions(item.id, !Object.values(p).every(Boolean));
+              }}
+              title={
+                Object.values(p).every(Boolean)
+                  ? "Untoggle all permissions"
+                  : "Toggle all permissions"
+              }
+              className="p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            >
+              {Object.values(p).every(Boolean) ? (
+                <Icons.ToggleRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+              ) : (
+                <Icons.ToggleLeft className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+              )}
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
