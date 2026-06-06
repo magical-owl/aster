@@ -437,6 +437,14 @@ export default function NavigationBuilderPage() {
     }
   };
 
+  // ComboBox state for searchable page select
+  const [pageSearch, setPageSearch] = useState("");
+  const [pageDropdownOpen, setPageDropdownOpen] = useState(false);
+
+  const filteredPages = pageFeatures.filter((f: any) =>
+    f.name.toLowerCase().includes(pageSearch.toLowerCase()),
+  );
+
   const filteredIcons = commonIcons.filter((icon) =>
     icon.toLowerCase().includes(iconSearch.toLowerCase()),
   );
@@ -812,52 +820,88 @@ export default function NavigationBuilderPage() {
               </select>
             </div>
             <div className="mb-4">
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
-                {newItemType === "container"
-                  ? "Select Container"
-                  : "Select Page"}
-              </label>
-              <select
-                value={selectedSourceItem}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  setSelectedSourceItem(id);
-                  if (newItemType === "page") {
-                    const f = pageFeatures.find((x: any) => x.id === id);
-                    if (f) {
-                      setNewItemName(f.name);
-                      setSelectedFeatureCode(f.code);
-                    }
-                  } else {
-                    const c = containers.find((x: any) => x.id === id);
-                    if (c) {
-                      setNewItemName(c.name);
-                      if (c.icon) setSelectedIcon(c.icon);
-                    }
-                  }
-                }}
-                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="">-- Select --</option>
-                {newItemType === "page"
-                  ? pageFeatures.map((f: any) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name}
-                      </option>
-                    ))
-                  : containers.map((c: any) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-              </select>
-              {selectedFeatureCode && (
-                <div className="mt-2 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                  <span>Selected feature code:</span>
-                  <code className="px-2 py-1 bg-zinc-100 dark:bg-zinc-900 rounded text-xs">
-                    {selectedFeatureCode}
-                  </code>
-                </div>
+              {newItemType === "container" ? (
+                <>
+                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                    Container Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    placeholder="Enter container name..."
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                    Select Page
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={pageSearch}
+                      onChange={(e) => {
+                        setPageSearch(e.target.value);
+                        setPageDropdownOpen(true);
+                      }}
+                      onFocus={() => setPageDropdownOpen(true)}
+                      placeholder={
+                        selectedSourceItem
+                          ? pageFeatures.find(
+                              (x: any) => x.id === selectedSourceItem,
+                            )?.name || "Search pages..."
+                          : "Search pages..."
+                      }
+                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                    />
+                    {pageDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setPageDropdownOpen(false)}
+                        />
+                        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg shadow-lg max-h-[200px] overflow-y-auto">
+                          {filteredPages.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400">
+                              No results found
+                            </div>
+                          ) : (
+                            filteredPages.map((f: any) => (
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedSourceItem(f.id);
+                                  setNewItemName(f.name);
+                                  setSelectedFeatureCode(f.code);
+                                  setPageSearch(f.name);
+                                  setPageDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                                  selectedSourceItem === f.id
+                                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+                                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                }`}
+                              >
+                                {f.name}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {selectedFeatureCode && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+                      <span>Selected feature code:</span>
+                      <code className="px-2 py-1 bg-zinc-100 dark:bg-zinc-900 rounded text-xs">
+                        {selectedFeatureCode}
+                      </code>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             <div className="mb-4">
