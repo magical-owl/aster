@@ -13,6 +13,7 @@ function buildNestedTree(items: any[], parentId: string | null = null): any[] {
       type: item.type === "container" ? "container" : "page",
       url: item.url,
       featureCode: item.featureCode,
+      permissions: item.permissions,
       children: buildNestedTree(items, item.id),
       expanded: true,
     }));
@@ -96,6 +97,13 @@ export async function PUT(
               sortOrder,
               code: item.id || String(Date.now() + sortOrder),
               featureCode: item.featureCode || null,
+              permissions: item.permissions ?? {
+                view: true,
+                create: false,
+                edit: false,
+                delete: false,
+                approve: false,
+              },
             },
           });
 

@@ -79,6 +79,16 @@ export async function buildUserNavigation({
             ? featurePathMap[item.featureCode]
             : item.url;
 
+        const permissions = item.permissions as
+          | {
+              view: boolean;
+              create: boolean;
+              edit: boolean;
+              delete: boolean;
+              approve: boolean;
+            }
+          | undefined;
+
         return {
           name: item.name,
           type: item.type as "page" | "container",
@@ -87,6 +97,13 @@ export async function buildUserNavigation({
           code: item.featureCode ?? undefined,
           url: url ?? undefined,
           id: item.id,
+          permissions: permissions ?? {
+            view: true,
+            create: false,
+            edit: false,
+            delete: false,
+            approve: false,
+          },
           children:
             buildTree(item.id).length > 0 ? buildTree(item.id) : undefined,
         };

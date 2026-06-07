@@ -182,7 +182,7 @@ export const columns: ColumnDef<User>[] = [
       return (
         <div className="text-right">
           <Link
-            href={`/dashboard/users/${userId}`}
+            href={`/dashboard/users/edit/${userId}`}
             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
           >
             Edit

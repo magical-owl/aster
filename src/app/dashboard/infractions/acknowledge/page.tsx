@@ -271,7 +271,9 @@ export default function AcknowledgeInfractionsPage() {
                   </button>
                   <button
                     onClick={() =>
-                      router.push(`/dashboard/infractions/${infraction.id}`)
+                      router.push(
+                        `/dashboard/infractions/view/${infraction.id}`,
+                      )
                     }
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
                   >

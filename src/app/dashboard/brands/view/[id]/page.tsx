@@ -406,7 +406,7 @@ export default function BrandDetailPage({
               </h2>
               <div className="flex gap-2">
                 <Link
-                  href={`/dashboard/brands/${brand.id}/edit`}
+                  href={`/dashboard/brands/edit/${brand.id}`}
                   className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-400 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/30 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
                   <svg
@@ -548,7 +548,7 @@ export default function BrandDetailPage({
                     className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-zinc-700/50"
                   >
                     <Link
-                      href={`/dashboard/teams/${team.id}`}
+                      href={`/dashboard/teams/view/${team.id}`}
                       className="flex items-center justify-between"
                     >
                       <div>

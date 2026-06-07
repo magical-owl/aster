@@ -256,14 +256,14 @@ export default function InfractionsPage() {
     switch (action.type) {
       case "view":
         // Navigate to view page
-        window.location.href = `/dashboard/infractions/${action.infraction.id}`;
+        window.location.href = `/dashboard/infractions/view/${action.infraction.id}`;
         break;
       case "acknowledge":
         openAcknowledgeModal(action.infraction.id);
         break;
       case "edit":
         // Navigate to edit page
-        window.location.href = `/dashboard/infractions/${action.infraction.id}/edit`;
+        window.location.href = `/dashboard/infractions/edit/${action.infraction.id}`;
         break;
     }
   }, []);
@@ -301,7 +301,7 @@ export default function InfractionsPage() {
   // Create the Add Infraction button
   const searchAction = (
     <Link
-      href="/dashboard/infractions/new"
+      href="/dashboard/infractions/create"
       className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 whitespace-nowrap"
     >
       + Add Infraction

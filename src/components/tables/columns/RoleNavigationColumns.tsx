@@ -110,7 +110,7 @@ export const columns: ColumnDef<RoleNavigationRecord>[] = [
       return (
         <div className="text-right">
           <Link
-            href={`/dashboard/feature-manager/role-mapping/${mappingId}`}
+            href={`/dashboard/feature-manager/role-mapping/edit/${mappingId}`}
             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
           >
             Edit
